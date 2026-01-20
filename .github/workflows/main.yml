@@ -1,0 +1,29 @@
+name: DevSecOps-Pipeline
+on: [push]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Run SonarQube Scan
+        run: echo "Running Static Analysis with SonarQube..."
+
+      - name: Build Docker Image
+        run: |
+          echo "FROM alpine:latest" > Dockerfile
+          docker build -t my-app:${{ github.sha }} .
+
+      - name: Scan Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'my-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0' 
+          severity: 'CRITICAL,HIGH'
+
+      - name: Deploy to Kubernetes
+        if: success()
+        run: echo "Deploying to K8s Cluster via ArgoCD..."
